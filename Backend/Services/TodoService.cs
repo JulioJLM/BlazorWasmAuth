@@ -1,4 +1,5 @@
 ﻿using Backend.Data;
+using Backend.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -42,20 +43,28 @@ namespace Backend.Services
         {
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
-                string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                Parallel.ForEach(todos, todo =>
+                try
                 {
-                    todo.UserId = userId;
-                });
-                
-                await db.TodoItems.AddRangeAsync(todos);
-                await db.SaveChangesAsync();
-                Parallel.ForEach(todos, todo =>
+                    string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                    Parallel.ForEach(todos, todo =>
+                    {
+                        todo.UserId = userId;
+                    });
+
+                    await db.TodoItems.AddRangeAsync(todos);
+                    await db.SaveChangesAsync();
+                    Parallel.ForEach(todos, todo =>
+                    {
+                        todo.ActivityNo = $"AC-{todo.Id:0000}";
+                    });
+                    await db.SaveChangesAsync();
+                    return TypedResults.Created($"/todoitems/all/{todos.Count}/{todos[0].Id}", todos);
+                }
+                catch (Exception ex)
                 {
-                    todo.ActivityNo = $"AC-{todo.Id:0000}";
-                });
-                await db.SaveChangesAsync();
-                return TypedResults.Created($"/todoitems/all/{todos.Count}/{todos[0].Id}", todos);
+                    Log.LogError(ex);
+                    return Results.BadRequest();
+                }
             }
             return Results.Unauthorized();
         }
@@ -64,20 +73,31 @@ namespace Backend.Services
         {
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
-                string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                var todo = await db.TodoItems.FirstOrDefaultAsync(m => m.Id == id&& m.Mark == Mark.Unmarked && m.UserId == userId);
-
-                if (todo is null)
+                try 
                 {
-                    return TypedResults.NotFound();
+                    string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                    var todo = await db.TodoItems.FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+                    if (todo is null)
+                    {
+                        return TypedResults.NotFound();
+                    }
+
+                    todo.Mark = inputTodo.Mark;
+                    if (inputTodo.Mark != Mark.Unmarked)
+                    {
+                        todo.Subject = inputTodo.Subject;
+                        todo.Description = inputTodo.Description;
+                    }
+
+                    await db.SaveChangesAsync();
+
+                    return TypedResults.NoContent();
                 }
-
-                todo.Subject = inputTodo.Subject;
-                todo.Mark = inputTodo.Mark;
-
-                await db.SaveChangesAsync();
-
-                return TypedResults.NoContent();
+                catch (Exception ex)
+                {
+                    Log.LogError(ex);
+                    return Results.BadRequest();
+                }
             }
             return Results.Unauthorized();
         }
@@ -86,15 +106,27 @@ namespace Backend.Services
         {
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
-                string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (await db.TodoItems.FirstOrDefaultAsync(m => m.Id == id && m.Mark == Mark.Unmarked && m.UserId == userId ) is TodoItem todo)
-                {
-                    db.TodoItems.Remove(todo);
-                    await db.SaveChangesAsync();
-                    return TypedResults.NoContent();
-                }
+                try
+                { 
+                    string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                    if (await db.TodoItems.FirstOrDefaultAsync(m => m.Id == id && m.Mark == Mark.Unmarked && m.UserId == userId ) is TodoItem todo)
+                    {
+                        if (todo.Mark == Mark.Unmarked)
+                        {
+                            return TypedResults.BadRequest();
+                        }
+                        db.TodoItems.Remove(todo);
+                        await db.SaveChangesAsync();
+                        return TypedResults.NoContent();
+                    }
 
-                return TypedResults.NotFound();
+                    return TypedResults.NotFound();
+                }
+                catch (Exception ex)
+                {
+                    Log.LogError(ex);
+                    return Results.BadRequest();
+                }
             }
             return Results.Unauthorized();
         }
