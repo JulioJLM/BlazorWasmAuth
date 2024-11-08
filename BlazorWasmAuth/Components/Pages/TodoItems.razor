@@ -20,6 +20,7 @@
 }
 else
 {
+    <button class="btn btn-success" @onclick="Current">Current</button>
     <input @bind="rowNum" />
     <button class="btn btn-success" @onclick="Previous">Previous</button>
     <button class="btn btn-success" @onclick="Next">Next</button>
@@ -112,17 +113,27 @@ else
                     <td>
                         <input @bind="item.Description" placeholder="Description" />
                     </td>
-                    <td class="text-center">
-                        @if (newItems.IndexOf(item) == 0)
-                        {
+                    @if (newItems.IndexOf(item) == 0)
+                    {
+                        <td class="text-center">
                             <button class="btn btn-success" @onclick="AddItem">Add</button>
+                        </td>
+                        <td class="text-center">
                             <button class="btn btn-success" @onclick="AddField">Add Field</button>
+                        </td>
+                        <td class="text-center">
                             @if (newItems.Count > 1)
                             {
                                 <button class="btn btn-success" @onclick="DelField">Del Field</button>
                             }
-                        }
-                    </td>
+                        </td>
+                    }
+                    else
+                    {
+                        <td />
+                        <td />
+                        <td />
+                    }
             </tr>
             }
         </tbody>
@@ -136,6 +147,7 @@ else
     private string? serviceEndpoint;
     private TodoItem[]? todoItems;
     private bool getCompletedItems;
+    private int dir = 0;
     private int lastId = 0;
     private int rowNum = 3;
 
@@ -159,7 +171,7 @@ else
 
     private async Task GetTodoItems()
     {
-        var requestUri = getCompletedItems ? $"{serviceEndpoint}/complete" : $"{serviceEndpoint}/all/{rowNum}/{lastId}";
+        var requestUri = getCompletedItems ? $"{serviceEndpoint}/complete" : $"{serviceEndpoint}/all/{dir}/{rowNum}/{lastId}";
         var client = ClientFactory.CreateClient("Auth");
         todoItems = await client.GetFromJsonAsync<TodoItem[]>(requestUri);
 
@@ -193,7 +205,18 @@ else
     {
         if (todoItems != null)
         {
+            dir = 0;
             lastId = todoItems.Select(m => m.Id).LastOrDefault();
+            await GetTodoItems();
+            editRowStyle = "none";
+        }
+    }
+
+    private async Task Current()
+    {
+        if (todoItems != null)
+        {
+            dir = 0;
             await GetTodoItems();
             editRowStyle = "none";
         }
@@ -203,6 +226,7 @@ else
     {
         if (todoItems != null)
         {
+            dir = 1;
             lastId = todoItems.Select(m => m.Id).FirstOrDefault();
             await GetTodoItems();
             editRowStyle = "none";
@@ -213,6 +237,7 @@ else
     {
         if (!string.IsNullOrEmpty(newItems[0].Subject))
         {
+            dir = 0;
             var client = ClientFactory.CreateClient("Auth");
             await client.PostAsJsonAsync(serviceEndpoint, newItems);
             await GetTodoItems();
@@ -224,6 +249,7 @@ else
     {
         if (editItem is not null)
         {
+            dir = 0;
             var client = ClientFactory.CreateClient("Auth");
             await client.PutAsJsonAsync($"{serviceEndpoint}/{editItem.Id}", editItem);
         }
@@ -233,6 +259,7 @@ else
 
     private async Task DeleteItem(long id)
     {
+        dir = 0;
         var client = ClientFactory.CreateClient("Auth");
         await client.DeleteAsync($"{serviceEndpoint}/{id}");
         await GetTodoItems();

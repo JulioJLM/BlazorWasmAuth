@@ -126,7 +126,7 @@ app.MapGet("/roles", (ClaimsPrincipal user) =>
 // Set up API endpoints and methods
 var todoItems = app.MapGroup("/todoitems");
 
-todoItems.MapGet("/all/{take}/{id}", TodoService.GetAllTodos).RequireAuthorization();
+todoItems.MapGet("/all/{dir}/{take}/{id}", TodoService.GetAllTodos).RequireAuthorization();
 todoItems.MapGet("/complete", TodoService.GetCompleteTodos).RequireAuthorization();
 todoItems.MapGet("/{id}", TodoService.GetTodo).RequireAuthorization();
 todoItems.MapPost("/", TodoService.CreateTodo).RequireAuthorization();

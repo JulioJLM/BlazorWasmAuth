@@ -8,13 +8,19 @@ namespace Backend.Services
 {
     public class TodoService
     {
-        public static async Task<IResult> GetAllTodos(int take, int id, AppDbContext db, ClaimsPrincipal user)
+        public static async Task<IResult> GetAllTodos(int dir, int take, int id, AppDbContext db, ClaimsPrincipal user)
         {
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
                 string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                return TypedResults.Ok(await db.TodoItems.Where(m => m.Id > id && m.UserId == userId).Take(take).ToArrayAsync());
-            }
+                if (dir == 0)
+                {
+                    return TypedResults.Ok(await db.TodoItems.Where(m => m.Id > id && m.UserId == userId).OrderBy(m => m.Id).Take(take).ToArrayAsync());
+                }
+                else if (dir == 1)
+                {
+                    return TypedResults.Ok(await db.TodoItems.Where(m => m.Id > id && m.UserId == userId).OrderByDescending(m => m.Id).Take(take).ToArrayAsync());
+                }
             return Results.Unauthorized();
         }
 
