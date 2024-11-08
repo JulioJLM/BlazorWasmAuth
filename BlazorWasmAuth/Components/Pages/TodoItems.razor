@@ -1,0 +1,241 @@
+@page "/todo-items"
+@attribute [Authorize]
+@using BlazorWasmAuth.Data
+@inject IConfiguration Config
+@inject HttpClient Http
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager NavManager
+
+<PageTitle>Todo Items</PageTitle>
+
+<AuthorizeView>
+    <p>Hello, @context.User.Identity?.Name! You're authenticated, so you can see this page.</p>
+</AuthorizeView>
+
+<h1>Todo Items</h1>
+
+@if (todoItems == null)
+{
+    <p>No Todo Items found.</p>
+}
+else
+{
+    <input @bind="rowNum" />
+    <button class="btn btn-success" @onclick="Previous">Previous</button>
+    <button class="btn btn-success" @onclick="Next">Next</button>
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="text-center">
+                    <label>
+                        Solved
+                        <input type="checkbox" @bind="getCompletedItems" @bind:after="GetTodoItems" />
+                    </label>
+                </th>
+                <th>Activity No</th>
+                <th>Subject</th>
+                <th>Description</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="editRow" style="display:@editRowStyle">
+                <td class="text-center">
+                    <select @bind="editItem.Mark">
+                        @foreach (Mark mark in Enum.GetValues(typeof(Mark)))
+                        {
+                            <option value="@mark">@mark</option>
+                        }
+                    </select>
+                </td>
+                <td>
+                    @editItem.ActivityNo
+                </td>
+                <td>
+                    @if (editItem.Mark == Mark.Unmarked)
+                    {
+                        <input @bind="editItem.Subject" />
+                    } 
+                    else
+                    {
+                        @editItem.Subject
+                    }
+                </td>
+                <td>
+                    @if (editItem.Mark == Mark.Unmarked)
+                    {
+                        <input @bind="editItem.Description" />
+                    } 
+                    else
+                    {
+                        @editItem.Description
+                    }
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-success" @onclick="SaveItem">
+                        Save
+                    </button>
+                    <button class="btn btn-danger" @onclick="@(() => editRowStyle = "none")">
+                        Cancel
+                    </button>
+                </td>
+            </tr>
+            @foreach (var item in todoItems)
+            {
+                <tr>
+                    <td class="text-center">
+                        <span>@item.Mark</span>
+                    </td>
+                    <td>@item.ActivityNo</td>
+                    <td>@item.Subject</td>
+                    <td>@item.Description</td>
+                    <td class="text-center">
+                        <button class="btn btn-warning" @onclick="@(() => EditItem(item.Id))">
+                            Edit
+                        </button>
+                        @if (item.Mark == Mark.Unmarked)
+                        {
+                            <button class="btn btn-danger" @onclick="@(async () => await DeleteItem(item.Id))">
+                                Delete
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+            @foreach (var item in newItems)
+            {
+            <tr id="addRow">
+                
+                    <td>
+                        <input @bind="item.Subject" placeholder="Subject" />
+                    </td>
+                    <td>
+                        <input @bind="item.Description" placeholder="Description" />
+                    </td>
+                    <td class="text-center">
+                        @if (newItems.IndexOf(item) == 0)
+                        {
+                            <button class="btn btn-success" @onclick="AddItem">Add</button>
+                            <button class="btn btn-success" @onclick="AddField">Add Field</button>
+                            @if (newItems.Count > 1)
+                            {
+                                <button class="btn btn-success" @onclick="DelField">Del Field</button>
+                            }
+                        }
+                    </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private TodoItem editItem = new();
+    private List<TodoItem> newItems = new List<TodoItem>();
+    private string editRowStyle = "none";
+    private string? serviceEndpoint;
+    private TodoItem[]? todoItems;
+    private bool getCompletedItems;
+    private int lastId = 0;
+    private int rowNum = 3;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState == null)
+        {
+            return;
+        }
+        var authState = await AuthState;
+        TodoItem newItem = new();
+        newItems.Add(newItem);
+
+        serviceEndpoint = $"{Config.GetValue<string>("BackendUrl")}/todoitems";
+        await GetTodoItems();
+
+    }
+
+    private async Task GetTodoItems()
+    {
+        var requestUri = getCompletedItems ? $"{serviceEndpoint}/complete" : $"{serviceEndpoint}/all/{rowNum}/{lastId}";
+        var client = ClientFactory.CreateClient("Auth");
+        todoItems = await client.GetFromJsonAsync<TodoItem[]>(requestUri);
+
+    }
+
+    private void EditItem(long id)
+    {
+        if (todoItems is not null)
+        {
+            editItem = todoItems.Single(i => i.Id == id);
+            editRowStyle = "table-row";
+        }
+    }
+
+    private async Task AddField()
+    {
+        TodoItem newItem = new();
+        newItems.Add(newItem);
+        await GetTodoItems();
+        editRowStyle = "none";
+    }
+
+    private async Task DelField()
+    {
+        newItems.RemoveAt(newItems.Count - 1);
+        await GetTodoItems();
+        editRowStyle = "none";
+    }
+
+    private async Task Next()
+    {
+        if (todoItems != null)
+        {
+            lastId = todoItems.Select(m => m.Id).LastOrDefault();
+            await GetTodoItems();
+            editRowStyle = "none";
+        }
+    }
+
+    private async Task Previous()
+    {
+        if (todoItems != null)
+        {
+            lastId = todoItems.Select(m => m.Id).FirstOrDefault();
+            await GetTodoItems();
+            editRowStyle = "none";
+        }
+    }
+
+    private async Task AddItem()
+    {
+        if (!string.IsNullOrEmpty(newItems[0].Subject))
+        {
+            var client = ClientFactory.CreateClient("Auth");
+            await client.PostAsJsonAsync(serviceEndpoint, newItems);
+            await GetTodoItems();
+            editRowStyle = "none";
+        }
+    }
+
+    private async Task SaveItem()
+    {
+        if (editItem is not null)
+        {
+            var client = ClientFactory.CreateClient("Auth");
+            await client.PutAsJsonAsync($"{serviceEndpoint}/{editItem.Id}", editItem);
+        }
+        await GetTodoItems();
+        editRowStyle = "none";
+    }
+
+    private async Task DeleteItem(long id)
+    {
+        var client = ClientFactory.CreateClient("Auth");
+        await client.DeleteAsync($"{serviceEndpoint}/{id}");
+        await GetTodoItems();
+        editRowStyle = "none";
+    }
+}
