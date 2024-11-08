@@ -21,6 +21,7 @@ namespace Backend.Services
                 {
                     return TypedResults.Ok(await db.TodoItems.Where(m => m.Id > id && m.UserId == userId).OrderByDescending(m => m.Id).Take(take).ToArrayAsync());
                 }
+            }
             return Results.Unauthorized();
         }
 
