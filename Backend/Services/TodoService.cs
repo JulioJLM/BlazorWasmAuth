@@ -8,7 +8,6 @@ namespace Backend.Services
 {
     public class TodoService
     {
-
         public static async Task<IResult> GetAllTodos(int take, int id, AppDbContext db, ClaimsPrincipal user)
         {
             if (user.Identity is not null && user.Identity.IsAuthenticated)
@@ -111,7 +110,7 @@ namespace Backend.Services
                     string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
                     if (await db.TodoItems.FirstOrDefaultAsync(m => m.Id == id && m.Mark == Mark.Unmarked && m.UserId == userId ) is TodoItem todo)
                     {
-                        if (todo.Mark == Mark.Unmarked)
+                        if (todo.Mark != Mark.Unmarked)
                         {
                             return TypedResults.BadRequest();
                         }
