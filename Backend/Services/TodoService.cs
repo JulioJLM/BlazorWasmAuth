@@ -108,7 +108,7 @@ namespace Backend.Services
                 try
                 { 
                     string? userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                    if (await db.TodoItems.FirstOrDefaultAsync(m => m.Id == id && m.Mark == Mark.Unmarked && m.UserId == userId ) is TodoItem todo)
+                    if (await db.TodoItems.FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId) is TodoItem todo)
                     {
                         if (todo.Mark != Mark.Unmarked)
                         {
