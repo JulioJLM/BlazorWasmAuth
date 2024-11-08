@@ -44,7 +44,7 @@ builder.Services.AddIdentityCore<AppUser>()
 builder.Services.AddCors(
     options => options.AddPolicy(
         "wasm",
-        policy => policy.WithOrigins([builder.Configuration["BackendUrl"] ?? "https://localhost:5001", 
+        policy => policy.WithOrigins([builder.Configuration["BackendUrl"] ?? "https://localhost:32774", 
             builder.Configuration["FrontendUrl"] ?? "https://localhost:5002"])
             .AllowAnyMethod()
             .AllowAnyHeader()

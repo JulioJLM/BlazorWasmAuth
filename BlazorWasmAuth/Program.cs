@@ -24,7 +24,7 @@ builder.Services.AddScoped(
 
 // set base address for default host
 builder.Services.AddScoped(sp =>
-    new HttpClient { BaseAddress = new Uri(builder.Configuration["FrontendUrl"] ?? "https://localhost:5002") });
+    new HttpClient { BaseAddress = new Uri(builder.Configuration["FrontendUrl"] ?? "https://localhost:32774") });
 
 // configure client for auth interactions
 builder.Services.AddHttpClient(
