@@ -5,7 +5,7 @@
 
 1. The default and fallback URLs for the two apps are:
 
-   * `Backend` app (`BackendUrl`): `https://localhost:7211` (fallback: `https://localhost:5001`)
+   * `Backend` app (`BackendUrl`): `https://localhost:32775` (fallback: `https://localhost:32774`)
    * `BlazorWasmAuth` app (`FrontendUrl`): `https://localhost:7171` (fallback: `https://localhost:5002`)
    
 1. If you plan to run the apps using the .NET CLI with `dotnet run`, note that first launch profile in the launch settings file is used to run an app, which is the insecure `http` profile (HTTP protocol). To run the apps securely (HTTPS protocol), take ***either*** of the following approaches:
